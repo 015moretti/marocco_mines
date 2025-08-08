@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>متنبئ لعبة Mines بالذكاء الاصطناعي — المغرب (Melbet)</title>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600&display=swap" rel="stylesheet"/>
+    <style>
+      body{font-family:"Montserrat",sans-serif;background:#121212;color:#fff;text-align:center;margin:0;padding:20px;min-height:100vh;display:flex;justify-content:center;align-items:center;direction:rtl}
+      body.modal-open{overflow:hidden}
+      .game-container{max-width:700px;width:100%;margin:0 auto;background:#1e1e1e;border-radius:15px;padding:25px;box-shadow:0 10px 30px rgba(0,0,0,.3);transform:translateY(0);transition:.3s;position:relative}
+      .game-container:hover{transform:translateY(-5px)}
+      h1{color:#ffcc00;margin-bottom:10px;font-weight:600;text-shadow:0 2px 4px rgba(0,0,0,.3)}
+      .badges{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-bottom:10px}
+      .badge{display:inline-block;padding:6px 10px;border-radius:8px;background:#064e3b;color:#a7f3d0;font-weight:700;font-size:13px}
+      .settings{display:flex;justify-content:center;gap:20px;flex-wrap:wrap}
+      .setting-group{display:flex;flex-direction:column;align-items:center}
+      label{display:block;margin-bottom:8px;font-weight:600;color:#ddd}
+      select,input{padding:10px 20px;border-radius:8px;background:#333;color:#fff;border:none;font-size:16px;transition:.3s;box-shadow:0 2px 5px rgba(0,0,0,.2);appearance:none;width:200px;text-align:center}
+      input{cursor:text;background-image:none!important}
+      input:invalid{border:2px solid #ff4444} input:valid{border:2px solid #00cc66} select:hover,input:hover{background:#444}
+      .board{display:grid;gap:10px;margin:25px 0;perspective:1000px;min-height:60px}
+      .cell{width:100%;aspect-ratio:1;background:#333;border-radius:8px;display:flex;justify-content:center;align-items:center;font-size:24px;user-select:none;transform-style:preserve-3d;transition:all .5s cubic-bezier(.25,.8,.25,1);box-shadow:0 2px 5px rgba(0,0,0,.2);opacity:0;transform:scale(.8) rotateY(180deg)}
+      .cell.visible{opacity:1;transform:scale(1) rotateY(0)}
+      .cell.mine{background:#ff4444;animation:pulse 1.5s infinite alternate}
+      .cell.gem{background:#2a2a2a;color:#00cc66;animation:float 3s ease-in-out infinite}
+      .bet-amount{font-size:20px;font-weight:600;color:#ffcc00;margin:15px 0;text-shadow:0 0 10px rgba(255,204,0,.3)}
+      .controls{margin-top:10px;display:flex;justify-content:center;gap:20px;flex-direction:column;align-items:center}
+      .id-form{display:flex;flex-direction:column;align-items:center;gap:14px;margin-bottom:20px}
+      .error-message{color:#ff4444;margin-top:5px;font-size:14px;min-height:20px}
+      button{background:#ffcc00;color:#121212;border:none;padding:14px 30px;border-radius:8px;font-weight:600;cursor:pointer;transition:.3s;font-size:16px;letter-spacing:.3px;box-shadow:0 4px 6px rgba(0,0,0,.1);position:relative;overflow:hidden;width:220px}
+      button:hover{background:#ffdd33;transform:translateY(-3px);box-shadow:0 7px 14px rgba(0,0,0,.2)}
+      button:active{transform:translateY(1px)}
+      button:disabled{background:#444;color:#777;cursor:not-allowed;transform:none;box-shadow:none}
+      button::after{content:"";position:absolute;inset:0;background:linear-gradient(45deg,transparent 25%,rgba(255,255,255,.1) 50%,transparent 75%);background-size:400% 400%;opacity:0;transition:.5s}
+      button:hover::after{opacity:1;animation:shine 1.5s infinite}
+      .hidden{display:none}
+      .loading-overlay{position:fixed;inset:0;background:rgba(0,0,0,.8);display:flex;flex-direction:column;justify-content:center;align-items:center;z-index:1000;opacity:0;visibility:hidden;transition:.3s}
+      .loading-overlay.active{opacity:1;visibility:visible}
+      .loading-spinner{width:50px;height:50px;border:5px solid rgba(255,204,0,.3);border-radius:50%;border-top-color:#ffcc00;animation:spin 1s ease-in-out infinite;margin-bottom:20px}
+      .loading-text{color:#ffcc00;font-size:18px;font-weight:600}
+      .how-to-use-btn{background:transparent;border:2px solid #ffcc00;color:#ffcc00;margin:0 auto 15px;width:90%;max-width:420px;white-space:nowrap}
+      .how-to-use-btn:hover{background:rgba(255,204,0,.1)}
+      .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);display:flex;justify-content:center;align-items:center;z-index:1000;opacity:0;visibility:hidden;transition:.3s}
+      .modal-overlay.active{opacity:1;visibility:visible}
+      .modal-content{background:#1e1e1e;border-radius:15px;padding:30px;max-width:520px;width:90%;position:relative;transform:translateY(20px);transition:.3s;box-shadow:0 10px 30px rgba(0,0,0,.5);text-align:right}
+      .modal-overlay.active .modal-content{transform:translateY(0)}
+      .close-modal{position:absolute;top:15px;left:15px;font-size:24px;color:#aaa;cursor:pointer;transition:.3s}
+      .close-modal:hover{color:#ff4444}
+      .modal-title{color:#ffcc00;margin-bottom:14px;font-size:22px}
+      .modal-text{line-height:1.7;margin-bottom:10px}
+      .modal-text ol{padding-right:18px}
+      .modal-text li{margin-bottom:10px}
+      .modal-text strong{color:#ffcc00}
+      @keyframes pulse{0%{transform:scale(1)}100%{transform:scale(1.05)}}
+      @keyframes float{0%{transform:translateY(0)}50%{transform:translateY(-5px)}100%{transform:translateY(0)}}
+      @keyframes shine{0%{background-position:100% 50%}100%{background-position:0% 50%}}
+      @keyframes spin{to{transform:rotate(360deg)}}
+      ::-webkit-scrollbar{width:8px}::-webkit-scrollbar-track{background:#1e1e1e;border-radius:4px}::-webkit-scrollbar-thumb{background:#ffcc00;border-radius:4px}::-webkit-scrollbar-thumb:hover{background:#ffdd33}
+    </style>
+  </head>
+  <body>
+    <!-- Loading Overlay -->
+    <div class="loading-overlay" id="loading-overlay">
+      <div class="loading-spinner"></div>
+      <div class="loading-text">جارٍ التحقق من المعرف...</div>
+    </div>
+
+    <!-- Modal Overlay -->
+    <div class="modal-overlay" id="modal-overlay">
+      <div class="modal-content">
+        <span class="close-modal" id="close-modal">&times;</span>
+        <h3 class="modal-title">كيفية استخدام البوت</h3>
+        <div class="modal-text">
+          <ol>
+            <li><strong>أولًا:</strong> اضغط «الحصول على مبلغ الرهان» لمعرفة المبلغ المطلوب.</li>
+            <li><strong>يَجِب</strong> وضع الرهان على Melbet بالمبلغ المعروض أولًا، ثم اضغط «الحصول على الإشارة».</li>
+          </ol>
+          <p>هذه هي الطريقة الوحيدة لتحقيق الربح.</p>
+          <p>إذا أخذت إشارة ولم تضع الرهان للتحقق، فستكون الإشارة غير دقيقة لأن البوت لا يرى رهانك ولا يستطيع تحليل الإشارة الرابحة.</p>
+          <div class="badges" style="margin-top:10px;">
+            <span class="badge">المغرب</span>
+            <span class="badge">العملة: MAD</span>
+            <span class="badge">رمز ترويجي: MHS77</span>
+            <span class="badge">الحد الأدنى للإيداع: 50 MAD</span>
+            <span class="badge">الحد الأقصى للرهان لكل إشارة: 25 MAD</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="game-container">
+      <h1>متنبئ لعبة Mines بالذكاء الاصطناعي — المغرب (Melbet)</h1>
+
+      <button class="how-to-use-btn" id="how-to-use-btn">كيفية استخدام البوت</button>
+
+      <div class="id-form" id="id-form">
+        <div class="setting-group">
+          <label for="user-id">أدخل معرف حساب Melbet الخاص بك</label>
+          <input type="text" id="user-id" pattern="\d{6,}" inputmode="numeric" placeholder="معرف Melbet (6 أرقام على الأقل)" required title="الرجاء إدخال 6 أرقام على الأقل"/>
+          <div class="error-message" id="error-message"></div>
+        </div>
+        <button id="verify-btn" disabled>تحقق من المعرف</button>
+      </div>
+
+      <div id="game-content" class="hidden">
+        <div class="settings">
+          <div class="setting-group">
+            <label for="grid-size">حجم الشبكة</label>
+            <select id="grid-size">
+              <option value="3">3×3</option>
+              <option value="4">4×4</option>
+              <option value="5" selected>5×5</option>
+              <option value="6">6×6</option>
+              <option value="7">7×7</option>
+            </select>
+          </div>
+          <div class="setting-group">
+            <label for="mines">عدد الألغام</label>
+            <select id="mines">
+              <option value="1">1 لغم</option>
+              <option value="2">2 لغم</option>
+              <option value="3" selected>3 ألغام</option>
+              <option value="4">4 ألغام</option>
+              <option value="5">5 ألغام</option>
+              <option value="6">6 ألغام</option>
+              <option value="7">7 ألغام</option>
+              <option value="10">10 ألغام</option>
+              <option value="15">15 لغم</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="board" id="board"></div>
+
+        <div class="controls">
+          <div class="bet-amount hidden" id="bet-amount-container">
+            قيمة رهانك: <span id="bet-amount">0</span> MAD
+          </div>
+          <div class="buttons">
+            <button id="get-bet-btn" onclick="getBetAmount()">الحصول على مبلغ الرهان</button>
+            <button id="signal-btn" onclick="getSignal()" disabled>الحصول على الإشارة</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      const CURRENCY="MAD", MAX_STAKE=25, MIN_STAKE=5;
+
+      const idForm=document.getElementById("id-form");
+      const gameContent=document.getElementById("game-content");
+      const userIdInput=document.getElementById("user-id");
+      const verifyBtn=document.getElementById("verify-btn");
+      const errorMessage=document.getElementById("error-message");
+      const boardElement=document.getElementById("board");
+      const gridSizeSelect=document.getElementById("grid-size");
+      const minesSelect=document.getElementById("mines");
+      const signalButton=document.getElementById("signal-btn");
+      const getBetButton=document.getElementById("get-bet-btn");
+      const betAmountContainer=document.getElementById("bet-amount-container");
+      const betAmountElement=document.getElementById("bet-amount");
+      const howToUseBtn=document.getElementById("how-to-use-btn");
+      const modalOverlay=document.getElementById("modal-overlay");
+      const closeModal=document.getElementById("close-modal");
+
+      function isValidId(v){return /^\d{6,}$/.test(v);}
+      userIdInput.addEventListener("input",()=>{
+        const v=userIdInput.value.trim().replace(/\D/g,""); userIdInput.value=v;
+        const ok=isValidId(v); verifyBtn.disabled=!ok; errorMessage.textContent=ok?"":"أدخل 6 أرقام على الأقل";
+      });
+
+      // How-to modal
+      howToUseBtn.addEventListener("click",()=>{document.body.classList.add("modal-open");modalOverlay.classList.add("active");});
+      closeModal.addEventListener("click",()=>{document.body.classList.remove("modal-open");modalOverlay.classList.remove("active");});
+      modalOverlay.addEventListener("click",(e)=>{if(e.target===modalOverlay){document.body.classList.remove("modal-open");modalOverlay.classList.remove("active");}});
+
+      // Verify
+      verifyBtn.addEventListener("click",()=>{
+        const id=userIdInput.value.trim();
+        if(!isValidId(id)){errorMessage.textContent="صيغة المعرف غير صحيحة";return;}
+        localStorage.setItem("melbetId",id);
+        // Fake loading
+        const overlay=document.createElement('div'); overlay.className='loading-overlay active'; overlay.innerHTML='<div class="loading-spinner"></div><div class="loading-text">جارٍ التحقق...</div>'; document.body.appendChild(overlay);
+        setTimeout(()=>{
+          overlay.remove();
+          idForm.remove(); gameContent.classList.remove("hidden");
+        },1500);
+      });
+
+      // Prefill from ?uid or localStorage
+      (function(){
+        const p=new URLSearchParams(location.search);
+        const qid=p.get("uid")||localStorage.getItem("melbetId");
+        if(qid&&isValidId(qid)){userIdInput.value=qid;userIdInput.dispatchEvent(new Event("input"));}
+      })();
+
+      function getBetAmount(){
+        boardElement.innerHTML=""; betAmountContainer.classList.add("hidden");
+        getBetButton.disabled=true; getBetButton.textContent="جارٍ التوليد...";
+        setTimeout(()=>{
+          const rnd=Math.floor(Math.random()*(MAX_STAKE-MIN_STAKE+1))+MIN_STAKE;
+          betAmountElement.textContent=String(rnd); betAmountContainer.classList.remove("hidden");
+          signalButton.disabled=false; getBetButton.textContent="الحصول على مبلغ الرهان"; getBetButton.disabled=false;
+        },800);
+      }
+
+      function getSignal(){
+        if(signalButton.disabled) return;
+        signalButton.disabled=true; getBetButton.disabled=true; signalButton.textContent="جارٍ التوليد...";
+
+        const size=parseInt(gridSizeSelect.value,10);
+        const minesCount=parseInt(minesSelect.value,10);
+        const maxMines=Math.min(size*size-1,15);
+        const mineCount=Math.min(minesCount,maxMines);
+
+        const board=Array(size*size).fill("gem");
+        let placed=0;
+        while(placed<mineCount){
+          const idx=Math.floor(Math.random()*board.length);
+          if(board[idx]!=="mine"){board[idx]="mine"; placed++;}
+        }
+
+        boardElement.innerHTML=""; boardElement.style.gridTemplateColumns=`repeat(${size},1fr)`;
+        for(let i=0;i<board.length;i++){
+          const cell=document.createElement("div");
+          cell.className="cell "+(board[i]==="mine"?"mine":"gem");
+          cell.textContent=board[i]==="mine"?"💣":"💎";
+          boardElement.appendChild(cell);
+          setTimeout(()=>cell.classList.add("visible"),50*((i%size)+Math.floor(i/size)));
+        }
+
+        setTimeout(()=>{ getBetButton.disabled=false; signalButton.textContent="الحصول على الإشارة"; },1000);
+      }
+    </script>
+  </body>
+</html>
